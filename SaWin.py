@@ -12,7 +12,6 @@ from nltk.stem import WordNetLemmatizer
 import SearchWin
 
 
-
 class SaWindow(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -80,19 +79,6 @@ class SaWindow(tk.Tk):
             tweet = re.sub('📝 …', '', tweet)
             tweet_token_list = tokenize(tweet)  # apply lemmatization and tokenization
             tweet = ' '.join(tweet_token_list)
-            return tweet
-
-        def basic_clean(tweet):
-            """Main master function to clean tweets only without tokenization or removal of stopwords"""
-            tweet = remove_users(tweet)
-            tweet = remove_links(tweet)
-            tweet = remove_hashtags(tweet)
-            tweet = remove_av(tweet)
-            tweet = tweet.lower()  # lower case
-            tweet = re.sub('[' + punctuation + ']+', ' ', tweet)  # strip punctuation
-            tweet = re.sub('\\s+', ' ', tweet)  # remove double spacing
-            tweet = re.sub('([0-9]+)', '', tweet)  # remove numbers
-            tweet = re.sub('📝 …', '', tweet)
             return tweet
 
         def tokenize_tweets(df):

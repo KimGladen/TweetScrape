@@ -1,3 +1,4 @@
+# Library imports
 import tkinter as tk
 from tkinter import messagebox
 import snscrape.modules.twitter as sntwitter
@@ -5,13 +6,13 @@ import pandas as pd
 import nltk
 import tkcalendar
 
-
+# File imports
 import TmWin
 import SaWin
 import settings
 from cluster_backend import exeCluster
-# nltk.dowload('omw-1.4')
-# nltk.download('words')
+# nltk.dowload('omw-1.4') run this on your first time
+# nltk.download('words') run this on your first time
 words = set(nltk.corpus.words.words())
 
 
@@ -137,7 +138,7 @@ class SearchWindow:
         for i, tweet in enumerate(
                 sntwitter.TwitterSearchScraper(f'{settings.search_input} since:{start_date} until:{end_date}, '
                                                f'lang:{search_lang} near:{search_location} within:{search_proximity}').get_items()):
-            if i > 100:
+            if i > 1000:
                 break
             tweets_list2.append([tweet.date, tweet.id, tweet.user.username, tweet.content])
 

@@ -4,27 +4,26 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from textblob import TextBlob
+from wordcloud import WordCloud, STOPWORDS
 import re
 import gensim
 from nltk.stem import WordNetLemmatizer
-from wordcloud import WordCloud, STOPWORDS
-from PIL import Image, ImageTk
 
 import SearchWin
+
 
 
 class SaWindow(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("PROJECT MANAGEMENT | ")
+        self.title("TWEETSCRAPE | SENTIMENT ANALYSIS ")
         self.configure(background="white")
 
         self.attributes('-fullscreen', True)
         self.bind('<Escape>', self.end_session)
 
-        # reference_df = SearchWin.file_selection()
-        # tweet_df = pd.read_csv(reference_df)
-        tweet_df = pd.read_csv('COVID19.csv')
+        reference_df = SearchWin.file_selection()
+        tweet_df = pd.read_csv(reference_df)
         tweet_df.dropna(axis='columns', inplace=True)
         tweet_df.drop_duplicates(inplace=True, subset="Tweet")
 
@@ -103,13 +102,16 @@ class SaWindow(tk.Tk):
             return df
 
         clean_df = tokenize_tweets(tweet_df)
-        clean_df.to_csv(r'cleaned_covid19.csv', index=False, header=True)
+        clean_df.to_csv(r'cleaned_data.csv', index=False, header=True)
+
+        # read data
+        df = pd.DataFrame(clean_df)
 
         # get sentiment of each tweet
         result = ['Positive', 'Negative', 'Neutral']
         sentiment = [0, 0, 0]
         colors = ["lightgreen", "red", "lightgrey"]
-        for i, val in enumerate(clean_df.Tweet):
+        for i, val in enumerate(df.Tweet):
             if i != 0:
                 x = str(val)
                 Blob = TextBlob(x)
@@ -129,9 +131,11 @@ class SaWindow(tk.Tk):
         figure2 = Figure(figsize=(40, 10))
         ax2 = figure2.add_subplot(111)
         ax2.pie(sentiment, labels=result, colors=colors, autopct='%1.1f%%')
+        handles, labels = ax2.get_legend_handles_labels()
+        ax2.legend(handles, labels)
+        ax2.set_title("Sentiment analysis")
         canvas = FigureCanvasTkAgg(figure2, master=self)
         canvas.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH)
-        # canvas.get_tk_widget().place(x=10, y=10)
         canvas.draw()
 
         # for the wordcloud
@@ -139,7 +143,7 @@ class SaWindow(tk.Tk):
         stopwords = list(STOPWORDS) + ["https"]
 
         # iterate through the csv file
-        for val in clean_df.Tweet:
+        for val in df.Tweet:
 
             # typecaste each val to string
             val = str(val)
@@ -156,30 +160,7 @@ class SaWindow(tk.Tk):
         wordcloud = WordCloud(width=800, height=800,
                               background_color='white',
                               min_word_length=3,
-                              min_font_size=10).generate(comment_words)
-
-        # for the wordcloud
-        comment_words = ''
-        stopwords = list(STOPWORDS) + ["https"]
-
-        # iterate through the csv file
-        for val in clean_df.Tweet:
-
-            # typecaste each val to string
-            val = str(val)
-
-            # split the value
-            tokens = val.split()
-
-            # Converts each token into lowercase
-            for i in range(len(tokens)):
-                tokens[i] = tokens[i].lower()
-
-            comment_words += " ".join(tokens) + " "
-
-        wordcloud = WordCloud(width=800, height=800,
-                              background_color='white',
-                              min_word_length=3,
+                              stopwords=stopwords,
                               min_font_size=10).generate(comment_words)
 
         # plot the WordCloud image
@@ -188,15 +169,6 @@ class SaWindow(tk.Tk):
         plt.axis("off")
         plt.tight_layout(pad=0)
         plt.show()
-        plt.savefig('sentiment_wordcloud.png')
-
-        image1 = Image.open("sentiment_wordcloud.png")
-        test = ImageTk.PhotoImage(image1)
-        label1 = tk.Label(image=test)
-        label1.image = test
-
-        # Position image
-        label1.place(x=50, y=50)
 
     def end_session(self, *args):
         self.destroy()

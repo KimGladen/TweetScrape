@@ -4,7 +4,6 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
 
-
 class TmWindow(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -20,13 +19,11 @@ class TmWindow(tk.Tk):
         line.get_tk_widget().pack(side=tk.LEFT, fill=tk.BOTH)
         line.draw()
 
-        df2 = pd.read_csv('cleaned_covid19.csv')
+        df2 = pd.read_csv('cleaned_data.csv')
         df = pd.DataFrame(df2, columns=['Date', 'Tweet'])
         df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
         df['Year'] = df['Date'].dt.year
         df['Date'] = df['Date'].dt.date
-        #df = df[['Date', 'Tweet']].groupby('Date').count()
-        #df.plot(kind='line', legend=True, ax=ax2, color='r', marker='o', fontsize=10)
         df.groupby('Date')['Tweet'].count().plot(kind='line', legend=True, ax=ax2, color='green',
                                                  figsize=(16, 8))
         ax2.set_title('Trend setting')

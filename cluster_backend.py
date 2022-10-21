@@ -2,99 +2,89 @@ import numpy as np
 import pandas as pd
 from gsdmm import MovieGroupProcess
 from tqdm import tqdm
-import re
 import pickle
+import re
 
-tweets_df = pd.read_csv(r'cleaned_data.csv')  # load data
-tweets_df['tokens'] = tweets_df.tokens.apply(lambda x: re.split('\\s', str(x)))
-# create list of  token lists
-docs = tweets_df['tokens'].tolist()
+import cluster_output
 
 
-# train STMM model
-mgp = MovieGroupProcess(K=10, alpha=0.1, beta=0.1, n_iters=30)
-vocab = set(x for doc in docs for x in doc)
-n_terms = len(vocab)
-y = mgp.fit(docs, n_terms)
-# save model
-with open('10clusters.model', 'wb') as f:
-    pickle.dump(mgp, f)
-    f.close()
+def exeCluster():
+    # load dataset
+    tweets_df = pd.read_csv(r'cleaned_data.csv')
+    # strip string(token) into individual
+    tweets_df['tokens'] = tweets_df.tokens.apply(lambda x: re.split('\\s', str(x)))
+    # create list of  token lists
+    docs = tweets_df['tokens'].tolist()
 
-# load in trained model
-filehandler = open('10clusters.model', 'rb')
-mgp = pickle.load(filehandler)
+    # train short text topic modelling
+    mgp = MovieGroupProcess(K=10, alpha=0.1, beta=0.1, n_iters=30)
+    vocab = set(x for doc in docs for x in doc)
+    n_terms = len(vocab)
+    y = mgp.fit(docs, n_terms)
+    # save model
+    with open('10clusters.model', 'wb') as f:
+        pickle.dump(mgp, f)
+        f.close()
 
+    # load in trained model
+    filehandler = open('10clusters.model', 'rb')
+    mgp = pickle.load(filehandler)
 
-# helper functions
-def top_words(cluster_word_distribution, top_cluster, values):
-    """prints the top words in each cluster"""
-    for cluster in top_cluster:
-        sort_dicts = sorted(mgp.cluster_word_distribution[cluster].items(), key=lambda k: k[1], reverse=True)[:values]
-        print('Cluster %s : %s' % (cluster, sort_dicts))
-        print(' — — — — — — — — —')
+    # helper functions
+    def top_words(cluster_word_distribution, top_cluster, values):
+        """prints the top words in each cluster"""
+        for cluster in top_cluster:
+            sort_dicts = sorted(mgp.cluster_word_distribution[cluster].items(), key=lambda k: k[1], reverse=True)[
+                         :values]
+            print('Cluster %s : %s' % (cluster, sort_dicts))
+            print(' — — — — — — — — —')
 
+    def topic_allocation(df, docs, mgp, topic_dict):
+        """allocates all topics to each document in original dataframe,
+        adding two columns for cluster number and cluster description"""
+        topic_allocations = []
+        for doc in tqdm(docs):
+            topic_label, score = mgp.choose_best_label(doc)
+            topic_allocations.append(topic_label)
 
-def cluster_importance(mgp):
-    """returns a word-topic matrix[phi] where each value represents
-    the word importance for that particular cluster;
-    phi[i][w] would be the importance of word w in topic i.
-    """
-    n_z_w = mgp.cluster_word_distribution
-    beta, V, K = mgp.beta, mgp.vocab_size, mgp.K
-    phi = [{} for i in range(K)]
-    for z in range(K):
-        for w in n_z_w[z]:
-            phi[z][w] = (n_z_w[z][w] + beta) / (sum(n_z_w[z].values()) + V * beta)
-    return phi
+        df['cluster'] = topic_allocations
 
+        df['topic_name'] = df.cluster.apply(lambda x: get_topic_name(x, topic_dict))
+        print('Complete. Number of documents with topic allocated: {}'.format(len(df)))
 
-def topic_allocation(df, docs, mgp, topic_dict):
-    """allocates all topics to each document in original dataframe,
-    adding two columns for cluster number and cluster description"""
-    topic_allocations = []
-    for doc in tqdm(docs):
-        topic_label, score = mgp.choose_best_label(doc)
-        topic_allocations.append(topic_label)
+    def get_topic_name(doc, topic_dict):
+        """returns the topic name string value from a dictionary of topics"""
+        topic_desc = topic_dict[doc]
+        return topic_desc
 
-    df['cluster'] = topic_allocations
+    doc_count = np.array(mgp.cluster_doc_count)
+    print('Number of documents per topic :', doc_count)
+    print('*' * 20)
+    # topics sorted by the number of documents they are allocated to
+    top_index = doc_count.argsort()[-10:][::-1]
+    print('Most important clusters (by number of docs inside):',
+          top_index)
+    print('*' * 20)
 
-    df['topic_name'] = df.cluster.apply(lambda x: get_topic_name(x, topic_dict))
-    print('Complete. Number of documents with topic allocated: {}'.format(len(df)))
+    # show the top 5 words in term frequency for each cluster
+    topic_indices = np.arange(start=0, stop=len(doc_count), step=1)
+    top_words(mgp.cluster_word_distribution, topic_indices, 5)
 
+    topic_dict = {}
+    topic_names = ['healthcare & policy',
+                   'virus/outbreaks',
+                   'cancer studies affecting woman/babies',
+                   'covid cases',
+                   'cancer & heart disease',
+                   'diet & exercise',
+                   'health & medical workers',
+                   'circuit breaker',
+                   'front liner',
+                   'public reaction']
+    for i, topic_num in enumerate(topic_indices):
+        topic_dict[topic_num] = topic_names[i]
+    topic_allocation(tweets_df, docs, mgp, topic_dict)
+    tweets_df.to_csv(r'10cluster.csv', index=False, header=True)
 
-def get_topic_name(doc, topic_dict):
-    """returns the topic name string value from a dictionary of topics"""
-    topic_desc = topic_dict[doc]
-    return topic_desc
+    cluster_output.topicModelling()
 
-
-doc_count = np.array(mgp.cluster_doc_count)
-print('Number of documents per topic :', doc_count)
-print('*' * 20)
-# topics sorted by the number of documents they are allocated to
-top_index = doc_count.argsort()[-10:][::-1]
-print('Most important clusters (by number of docs inside):',
-      top_index)
-print('*' * 20)
-# show the top 5 words in term frequency for each cluster
-topic_indices = np.arange(start=0, stop=len(doc_count), step=1)
-top_words(mgp.cluster_word_distribution, topic_indices, 5)
-
-topic_dict = {}
-topic_names = ['healthcare & policy',
-               'virus/outbreaks',
-               'cancer studies affecting woman/babies',
-               'miscellaneous studies affecting women/children',
-               'cancer & heart disease',
-               'diet & exercise',
-               'health & medical workers',
-               'abortion',
-               'vaping & cigarettes',
-               'drug costs & opioid crisis']
-for i, topic_num in enumerate(topic_indices):
-    topic_dict[topic_num] = topic_names[i]
-topic_allocation(tweets_df, docs, mgp, topic_dict)
-
-tweets_df.to_csv(r'10cluster.csv', index=False,
-                 header=True)

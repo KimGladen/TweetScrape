@@ -5,11 +5,12 @@ import pandas as pd
 import nltk
 import tkcalendar
 
+
 import TmWin
 import SaWin
-import cluster_output
 import settings
-
+from cluster_backend import exeCluster
+# nltk.dowload('omw-1.4')
 # nltk.download('words')
 words = set(nltk.corpus.words.words())
 
@@ -19,9 +20,17 @@ def file_selection():
     search_input = settings.search_input + '.csv'
     if search_input not in search_list:
         search_list.append(search_input)
+        with open('list_of_entry.txt', 'w') as enL:
+            for item in search_list:
+                enL.write('%s\n' % item)
+        return search_input
+    elif search_input in search_list:
+        with open('list_of_entry.txt', 'r') as enL:
+            for item in search_list:
+                search_input = item
         return search_input
     else:
-        return 0
+        return None
 
 
 class SearchWindow:
@@ -105,13 +114,13 @@ class SearchWindow:
         else:
             return None
 
-    def startTm(self):
-        cluster_output.topicModelling()
-
     def startSa(self):
         self.win.destroy()
         SaWin.SaWindow()
         TmWin.TmWindow()
+
+    def startTm(self):
+        exeCluster()
 
     def extractTweet(self, event):
         tweets_list2 = []
@@ -154,3 +163,4 @@ if __name__ == '__main__':
     exeL = SearchWindow()
     exeL.loginWin()
     exeL.callEntry()
+

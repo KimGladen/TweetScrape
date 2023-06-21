@@ -1,6 +1,5 @@
 # Tweetscrape v1.0, maintained as of 21/10/2022.
-Abstract: We are a five member year one university students from Computer Engineering doing a team assignment based on Python Programming.
-As our last lesson before embarking to other programming languages, we have been assigned a project to utilise our capabilities.
+
 
 
 # The objective of this project was to develop a program that was capable of:
